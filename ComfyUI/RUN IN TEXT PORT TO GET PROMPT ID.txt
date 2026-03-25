@@ -1,0 +1,81 @@
+RUN IN TEXT PORT TO GET PROMPT ID
+
+import json
+import urllib.request
+
+workflow = {
+  "1": {
+    "inputs": {
+      "ckpt_name": "epicrealism_naturalSinRC1VAE.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "2": {
+    "inputs": {
+      "text": "A shipwreck on a stormy sea",
+      "clip": ["1", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "3": {
+    "inputs": {
+      "text": "",
+      "clip": ["1", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "4": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage"
+  },
+  "5": {
+    "inputs": {
+      "seed": 720734202966670,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": ["1", 0],
+      "positive": ["2", 0],
+      "negative": ["3", 0],
+      "latent_image": ["4", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "6": {
+    "inputs": {
+      "samples": ["5", 0],
+      "vae": ["1", 2]
+    },
+    "class_type": "VAEDecode"
+  },
+  "7": {
+    "inputs": {
+      "filename_prefix": "Ship",
+      "images": ["6", 0]
+    },
+    "class_type": "SaveImage"
+  }
+}
+
+payload = {
+    "prompt": workflow
+}
+
+data = json.dumps(payload).encode("utf-8")
+
+req = urllib.request.Request(
+    "http://127.0.0.1:8188/prompt",
+    data=data,
+    headers={"Content-Type": "application/json"},
+    method="POST"
+)
+
+with urllib.request.urlopen(req) as response:
+    result = response.read().decode("utf-8")
+    print(result)
